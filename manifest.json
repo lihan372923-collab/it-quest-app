@@ -1,0 +1,9 @@
+{
+  "name": "IT 小白闯关营 Final",
+  "short_name": "IT闯关营",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#070b16",
+  "theme_color": "#070b16",
+  "icons": []
+}
