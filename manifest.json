@@ -1,9 +1,27 @@
 {
-  "name": "IT 小白闯关营 Final",
+  "name": "IT 小白闯关营",
   "short_name": "IT闯关营",
-  "start_url": "./index.html",
+  "description": "从零开始的IT学习之旅，闯关式学习Linux、命令、编程基础",
+  "start_url": "/it-quest-app/",
   "display": "standalone",
   "background_color": "#070b16",
-  "theme_color": "#070b16",
-  "icons": []
+  "theme_color": "#00d4aa",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "utilities"],
+  "lang": "zh-CN",
+  "orientation": "portrait",
+  "scope": "/it-quest-app/"
 }
