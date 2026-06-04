@@ -1,25 +1,180 @@
-let APPDATA = JSON.parse(localStorage.getItem("customDataFinal") || "null") || DATA;
-const $=s=>document.querySelector(s);const $$=s=>[...document.querySelectorAll(s)];
-let allLessons=APPDATA.stages.flatMap(s=>s.lessons);let lastPage="home";let currentLessonId=null;
-const state={done:JSON.parse(localStorage.getItem("doneFinal")||"[]"),wrong:JSON.parse(localStorage.getItem("wrongFinal")||"[]"),fav:JSON.parse(localStorage.getItem("favFinal")||"[]"),tasks:JSON.parse(localStorage.getItem("tasksFinal")||"{}"),notes:JSON.parse(localStorage.getItem("notesFinal")||"{}")};
-function save(){localStorage.setItem("doneFinal",JSON.stringify(state.done));localStorage.setItem("wrongFinal",JSON.stringify(state.wrong));localStorage.setItem("favFinal",JSON.stringify(state.fav));localStorage.setItem("tasksFinal",JSON.stringify(state.tasks));localStorage.setItem("notesFinal",JSON.stringify(state.notes))}
-function page(id){if(id!=="lesson")lastPage=id;$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));if(id==="admin")dataPreview.value=JSON.stringify(APPDATA,null,2)}
+(async()=>{try{if("serviceWorker"in navigator){for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister()}if("caches"in window){for(const k of await caches.keys())await caches.delete(k)}}catch(e){}})();
+let activeWorld=DATA.worlds[0].id, activeCat="全部", tool="cmd";
+const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
+const state={done:JSON.parse(localStorage.getItem("work_done")||"[]"),xp:+localStorage.getItem("work_xp")||0,fav:JSON.parse(localStorage.getItem("work_fav")||"[]")};
+function save(){localStorage.setItem("work_done",JSON.stringify(state.done));localStorage.setItem("work_xp",state.xp);localStorage.setItem("work_fav",JSON.stringify(state.fav))}
+function nav(id){
+  closeAllModals();
+  $$(".page").forEach(p=>p.classList.remove("active"));
+  $("#"+id).classList.add("active");
+  $$(".tabbar button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));
+}
+let modalStack=[];
+function activeModalId(){
+  const m=$$(".modal").find(x=>x.classList.contains("active"));
+  return m?m.id:null;
+}
+function openModal(id){
+  const current=activeModalId();
+  if(current && current!==id) modalStack.push(current);
+  $$(".modal").forEach(m=>m.classList.remove("active"));
+  $("#"+id).classList.add("active");
+  if(id==="settings" && typeof renderThemeButtons==="function") renderThemeButtons();
+  if(id==="search") setTimeout(()=>{try{searchInput.focus()}catch(e){}},80);
+}
+function closeModal(){
+  const prev=modalStack.pop();
+  $$(".modal").forEach(m=>m.classList.remove("active"));
+  if(prev && $("#"+prev)) $("#"+prev).classList.add("active");
+}
+function closeAllModals(){
+  modalStack=[];
+  $$(".modal").forEach(m=>m.classList.remove("active"));
+}
 function unlocked(id){return id===1||state.done.includes(id-1)||state.done.includes(id)}
-function progress(){const c=state.done.length;$("#progressText").textContent=`已完成 ${c} / ${allLessons.length} 关`;$("#progressBar").style.width=Math.round(c/allLessons.length*100)+"%";let lv="Lv1 电脑新手";if(c>=90)lv="Lv10 独立部署者";else if(c>=80)lv="Lv9 项目实战者";else if(c>=70)lv="Lv8 安全巡检员";else if(c>=60)lv="Lv7 初级运维师";else if(c>=50)lv="Lv6 Docker 训练生";else if(c>=40)lv="Lv5 建站新手";else if(c>=30)lv="Lv4 服务器操作者";else if(c>=20)lv="Lv3 终端学徒";else if(c>=10)lv="Lv2 网络入门者";$("#levelName").textContent=lv;dailyList.innerHTML=[`继续完成第 ${Math.min(c+1,allLessons.length)} 关`,`复习 ${Math.min(3,APPDATA.commands.length)} 条收藏/常用命令`,`打开 1 个排查案例练习`].map(x=>`<li>${x}</li>`).join("")}
-function renderMap(){stageList.innerHTML=APPDATA.stages.map(s=>`<div class="stage"><div class="stage-head"><div><h3>${s.title}</h3><small>${s.desc}</small></div><small>${s.lessons.filter(l=>state.done.includes(l.id)).length}/${s.lessons.length}</small></div><div class="lesson-grid">${s.lessons.map(l=>`<div class="lesson-item ${state.done.includes(l.id)?"done":""} ${unlocked(l.id)?"":"locked"}" data-id="${l.id}"><b>第 ${l.id} 关 ${state.done.includes(l.id)?"✓":unlocked(l.id)?"":"🔒"}</b><h4>${l.title}</h4><p>${l.minutes} 分钟 · ${"★".repeat(l.difficulty)}${"☆".repeat(5-l.difficulty)}</p></div>`).join("")}</div></div>`).join("");$$(".lesson-item").forEach(el=>el.onclick=()=>{const id=+el.dataset.id;if(!unlocked(id))return alert("先完成上一关，再解锁本关。");openLesson(id)})}
-function renderRoutes(){routeList.innerHTML=APPDATA.routes.map(r=>{let ids=APPDATA.stages.filter(s=>r.stageIds.includes(s.id)).flatMap(s=>s.lessons.map(l=>l.id));let done=ids.filter(id=>state.done.includes(id)).length;return `<div class="card"><span class="tag">${done}/${ids.length}</span><h3>${r.title}</h3><p>${r.desc}</p><div class="progress"><span style="width:${Math.round(done/ids.length*100)}%"></span></div><br><button onclick="openLesson(${ids.find(id=>!state.done.includes(id)&&unlocked(id))||ids[0]})">开始/继续</button></div>`}).join("")}
-function openLesson(id){currentLessonId=id;const l=allLessons.find(x=>x.id===id);page("lesson");const taskKey="l"+id;const checked=state.tasks[taskKey]||[];lessonContent.innerHTML=`<h2>第 ${l.id} 关：${l.title}</h2><div class="meta"><span class="pill">难度 ${"★".repeat(l.difficulty)}${"☆".repeat(5-l.difficulty)}</span><span class="pill">预计 ${l.minutes} 分钟</span><span class="pill">${l.topic}</span></div><p>${l.story}</p><h3>知识讲解</h3>${l.explain.map(x=>`<p>${x}</p>`).join("")}${l.commands.length?`<h3>核心命令</h3><pre>${esc(l.commands.join("\n"))}</pre>`:""}<h3>速记卡</h3><div class="cheat">${l.cheat.map(x=>`<p>${x}</p>`).join("")}</div><h3>任务清单</h3><div class="tasks">${l.tasks.map((t,i)=>`<label><input type="checkbox" data-task="${i}" ${checked.includes(i)?"checked":""}/> ${t}</label>`).join("")}</div><h3>本关笔记</h3><textarea class="notearea" id="lessonNote" placeholder="记录你自己的理解、服务器命令、踩坑点...">${esc(state.notes[taskKey]||"")}</textarea><div class="quiz"><h3>通关测试</h3>${l.quiz.map((q,qi)=>`<div class="qblock" data-q="${qi}"><p>${qi+1}. ${q[0]}</p>${q[1].map((o,i)=>`<button class="option" data-q="${qi}" data-i="${i}">${String.fromCharCode(65+i)}. ${o}</button>`).join("")}</div>`).join("")}<p id="quizResult"></p></div>`;$$("[data-task]").forEach(cb=>cb.onchange=()=>{state.tasks[taskKey]=$$("[data-task]").filter(x=>x.checked).map(x=>+x.dataset.task);save()});lessonNote.oninput=e=>{state.notes[taskKey]=e.target.value;save();renderNotes()};let answered={};$$(".option").forEach(btn=>btn.onclick=()=>{const qi=+btn.dataset.q,i=+btn.dataset.i,q=l.quiz[qi],ok=i===q[2];answered[qi]=ok;$$(`.option[data-q="${qi}"]`).forEach((b)=>{b.disabled=true;if(+b.dataset.i===q[2])b.classList.add("correct")});if(!ok){btn.classList.add("wrong");if(!state.wrong.find(w=>w.id===l.id&&w.q===q[0]))state.wrong.push({id:l.id,title:l.title,q:q[0],a:q[1][q[2]]})}if(Object.keys(answered).length===l.quiz.length){const pass=Object.values(answered).every(Boolean);quizResult.innerHTML=pass?'<span style="color:var(--green)">全部答对，已通关。</span>':'<span style="color:var(--red)">有题答错，已加入错题本。也可以继续下一关。</span>';if(!state.done.includes(l.id))state.done.push(l.id);save();renderAll()}else save()})}
-function renderCommands(k=""){let list=APPDATA.commands.filter(c=>!k||JSON.stringify(c).toLowerCase().includes(k.toLowerCase()));commandList.innerHTML=list.map(c=>`<div class="card"><button class="fav" onclick="toggleFav('${c.name.replaceAll("'","\\'")}')">${state.fav.includes(c.name)?"★":"☆"}</button><span class="tag">${c.cat}</span><h3>${c.name}</h3><p>${c.desc}</p><pre>${esc(c.example)}</pre></div>`).join("")}
-function toggleFav(n){state.fav=state.fav.includes(n)?state.fav.filter(x=>x!==n):[...state.fav,n];save();renderCommands(commandSearch.value)}
-function renderTroubles(){troubleList.innerHTML=APPDATA.troubles.map(t=>`<div class="card"><span class="tag">${t.tags.join(" / ")}</span><h3>${t.title}</h3><h4>排查步骤</h4><ol class="step">${t.steps.map(s=>`<li>${s}</li>`).join("")}</ol><pre>${esc(t.commands.join("\n"))}</pre></div>`).join("")}
-function renderProjects(){projectList.innerHTML=APPDATA.projects.map(p=>`<div class="card"><span class="tag">${p.level}</span><h3>${p.title}</h3><p>${p.desc}</p><ol class="step">${p.steps.map(s=>`<li>${s}</li>`).join("")}</ol><p><b style="color:var(--green)">验收：</b>${p.check}</p></div>`).join("")}
-function renderGlossary(k=""){let list=APPDATA.glossary.filter(g=>!k||JSON.stringify(g).toLowerCase().includes(k.toLowerCase()));glossaryList.innerHTML=list.map(g=>`<div class="card"><h3>${g.term}</h3><p>${g.desc}</p></div>`).join("")}
-function renderWrong(){wrongList.innerHTML=state.wrong.length?state.wrong.map(w=>`<div class="card"><span class="tag">第 ${w.id} 关</span><h3>${w.title}</h3><p>${w.q}</p><p><b style="color:var(--green)">正确答案：</b>${w.a}</p></div>`).join(""):`<div class="card"><p>暂无错题。</p></div>`}
-function renderNotes(){const entries=Object.entries(state.notes).filter(([k,v])=>v.trim());notesList.innerHTML=entries.length?entries.map(([k,v])=>{let id=+k.replace("l",""),l=allLessons.find(x=>x.id===id);return `<div class="card"><span class="tag">第 ${id} 关</span><h3>${l?l.title:"笔记"}</h3><p>${esc(v).replaceAll("\n","<br>")}</p></div>`}).join(""):`<div class="card"><p>暂无笔记。</p></div>`}
-function renderAchievements(){let marks=[3,10,20,30,40,50,60,70,80,100],names=["电脑新手","网络入门者","终端学徒","服务器操作者","建站新手","Docker 训练生","初级运维师","安全巡检员","项目实战者","独立部署者"];achievementList.innerHTML=names.map((n,i)=>`<div class="card ${state.done.length>=marks[i]?"":"lock"}"><div class="badge">${state.done.length>=marks[i]?"✓":"?"}</div><h3>${n}</h3><p>完成 ${marks[i]} 关解锁</p></div>`).join("")}
-function renderSearch(k=""){if(!k){searchResults.innerHTML='<div class="card"><p>输入关键词开始搜索课程、命令、故障、项目和术语。</p></div>';return}k=k.toLowerCase();let arr=[];allLessons.filter(l=>JSON.stringify(l).toLowerCase().includes(k)).slice(0,10).forEach(l=>arr.push(`<div class="card"><span class="tag">课程</span><h3>第 ${l.id} 关：${l.title}</h3><p>${l.explain[0]}</p><button onclick="openLesson(${l.id})">打开</button></div>`));APPDATA.commands.filter(c=>JSON.stringify(c).toLowerCase().includes(k)).slice(0,10).forEach(c=>arr.push(`<div class="card"><span class="tag">命令</span><h3>${c.name}</h3><p>${c.desc}</p><pre>${esc(c.example)}</pre></div>`));APPDATA.troubles.filter(t=>JSON.stringify(t).toLowerCase().includes(k)).forEach(t=>arr.push(`<div class="card"><span class="tag">故障</span><h3>${t.title}</h3><p>${t.steps[0]}</p></div>`));APPDATA.projects.filter(p=>JSON.stringify(p).toLowerCase().includes(k)).forEach(p=>arr.push(`<div class="card"><span class="tag">项目</span><h3>${p.title}</h3><p>${p.desc}</p></div>`));APPDATA.glossary.filter(g=>JSON.stringify(g).toLowerCase().includes(k)).forEach(g=>arr.push(`<div class="card"><span class="tag">术语</span><h3>${g.term}</h3><p>${g.desc}</p></div>`));searchResults.innerHTML=arr.join("")||'<div class="card"><p>没有找到相关内容。</p></div>'}
-function renderAll(){allLessons=APPDATA.stages.flatMap(s=>s.lessons);progress();renderMap();renderRoutes();renderCommands(commandSearch?.value||"");renderTroubles();renderProjects();renderGlossary(glossarySearch?.value||"");renderWrong();renderNotes();renderAchievements();renderSearch(globalSearch?.value||"");if(dataPreview)dataPreview.value=JSON.stringify(APPDATA,null,2)}
-function download(name,obj){const blob=new Blob([typeof obj==="string"?obj:JSON.stringify(obj,null,2)],{type:"application/json;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href)}
-function readJson(file,cb){const r=new FileReader();r.onload=()=>{try{cb(JSON.parse(r.result))}catch(e){alert("JSON 格式错误")}};r.readAsText(file)}
-function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
-$$('#nav button').forEach(b=>b.onclick=()=>page(b.dataset.page));$$('[data-jump]').forEach(b=>b.onclick=()=>page(b.dataset.jump));backBtn.onclick=()=>page(lastPage);continueBtn.onclick=()=>{let n=allLessons.find(l=>!state.done.includes(l.id)&&unlocked(l.id))||allLessons[0];openLesson(n.id)};commandSearch.oninput=e=>renderCommands(e.target.value);globalSearch.oninput=e=>renderSearch(e.target.value);glossarySearch.oninput=e=>renderGlossary(e.target.value);clearWrong.onclick=()=>{state.wrong=[];save();renderWrong()};exportNotes.onclick=()=>download("notes.json",state.notes);exportData.onclick=()=>download("it-quest-data.json",APPDATA);exportProgress.onclick=()=>download("it-quest-progress.json",state);importData.onchange=e=>{let f=e.target.files[0];if(f)readJson(f,obj=>{APPDATA=obj;localStorage.setItem("customDataFinal",JSON.stringify(obj));renderAll();alert("数据已导入")})};importProgress.onchange=e=>{let f=e.target.files[0];if(f)readJson(f,obj=>{Object.assign(state,obj);save();renderAll();alert("进度已导入")})};resetBtn.onclick=()=>{if(confirm("确定重置本地进度、错题、收藏、任务和笔记吗？课程数据不会删除。")){state.done=[];state.wrong=[];state.fav=[];state.tasks={};state.notes={};save();renderAll();page("home")}};if("serviceWorker"in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}renderAll();
+function role(){let c=state.done.length;if(c>=60)return"全栈工具师";if(c>=45)return"自动化工具师";if(c>=35)return"服务器学徒";if(c>=25)return"网络排障员";if(c>=15)return"安防巡检员";if(c>=8)return"电脑店技术员";return"技术学徒"}
+function renderHome(){
+  roleName.textContent=role();
+  progressText.textContent=`已完成 ${state.done.length} 关 · ${state.xp} XP`;
+  continueBtn.textContent=state.done.length===0?"开始学习":(state.done.length>=DATA.lessons.length?"全部完成":"继续闯关");
+  progressBar.style.width=Math.min(100,Math.round(state.done.length/DATA.lessons.length*100))+"%";
+  worldStrip.innerHTML=DATA.worlds.map(w=>`<article class="world-card" onclick="goWorld('${w.id}')"><div class="emoji">${w.emoji}</div><h3>${w.title}</h3><p>${w.desc}</p></article>`).join("");
+  hotProblems.innerHTML=DATA.problems.slice(0,6).map(p=>`<div class="quick" onclick="openProblem('${attr(p.title)}')">${p.title}</div>`).join("");
+  bossPreview.innerHTML=DATA.bosses.slice(0,2).map(b=>`<article class="card"><span class="sub">BOSS</span><h3>${b.title}</h3><p>${b.world}</p></article>`).join("");
+}
+function goWorld(id){activeWorld=id;nav("learn");renderLearn()}
+function renderLearn(){worldTabs.innerHTML=DATA.worlds.map(w=>`<button class="chip ${w.id===activeWorld?"active":""}" onclick="goWorld('${w.id}')">${w.emoji} ${w.title}</button>`).join("");let list=DATA.lessons.filter(l=>l.world===activeWorld);lessonPath.innerHTML=list.map(l=>`<div class="node ${state.done.includes(l.id)?"done":unlocked(l.id)?"open":"lock"}" onclick="tryLesson(${l.id})"><div class="badge">${state.done.includes(l.id)?"✓":l.id}</div><div class="node-card"><h3>${l.title}</h3><p>${l.role} · +${l.xp} XP</p></div></div>`).join("")}
+function tryLesson(id){if(!unlocked(id))return alert("先完成上一关");openLesson(id)}
+let currentLesson=null;
+let lessonStep=0;
+
+function lessonSections(l){
+  const cmdText=(l.commands||[]).join("\n");
+  return [
+    {name:"概览", html:`<section class="block"><span class="sub">SCENE</span><h3>场景</h3><p>${l.scene}</p></section>`},
+    {name:"目标", html:`<section class="block"><span class="sub">TARGET</span><h3>本关目标</h3>${l.goal.map(x=>`<p>• ${x}</p>`).join("")}</section>`},
+    {name:"讲解", html:`<section class="block"><span class="sub">KNOWLEDGE</span><h3>知识讲解</h3>${l.explain.map(x=>`<p>${x}</p>`).join("")}</section>`},
+    {name:"步骤", html:`<section class="block"><span class="sub">WORKFLOW</span><h3>工作步骤 / 命令</h3><button class="copy" id="copyLessonCmd">复制</button><pre class="cmd">${esc(cmdText)}</pre></section>`},
+    {name:"测试", html:`<section class="block"><span class="sub">QUIZ</span><h3>通关测试</h3>${l.quiz.map((q,qi)=>`<p>${q[0]}</p>${q[1].map((o,i)=>`<button class="option" data-a="${q[2]}" data-i="${i}" onclick="answer(this,${l.id},${l.xp})">${String.fromCharCode(65+i)}. ${o}</button>`).join("")}`).join("")}<p id="result"></p></section>`},
+    {name:"关联", html:`<section class="block"><span class="sub">WORK LINK</span><h3>关联工作问题</h3><p>学完这一关，工作中遇到下面这些问题时就能用上。</p>${l.related.map(x=>`<button class="rowbtn" onclick="openProblem('${attr(x)}')">${x}</button> `).join("")}</section>`}
+  ];
+}
+
+function renderLessonStep(){
+  if(!currentLesson) return;
+  const l=currentLesson;
+  const sections=lessonSections(l);
+  lessonStep=Math.max(0,Math.min(lessonStep,sections.length-1));
+  lessonMeta.textContent=`${l.role} · +${l.xp} XP · ${lessonStep+1}/${sections.length}`;
+  lessonTitle.textContent=l.title;
+  lessonBody.innerHTML=
+    `<div class="lesson-progress"><i style="width:${Math.round((lessonStep+1)/sections.length*100)}%"></i></div>`+
+    `<div class="lesson-tabs">${sections.map((s,i)=>`<button class="${i===lessonStep?"active":""}" onclick="setLessonStep(${i})">${s.name}</button>`).join("")}</div>`+
+    sections[lessonStep].html+
+    `<div class="lesson-actions">
+      <button class="ghost" onclick="prevLessonStep()" ${lessonStep===0?"disabled":""}>上一页</button>
+      <button class="primary2" onclick="nextLessonStep()">${lessonStep===sections.length-1?(state.done.includes(currentLesson.id)?"关闭":"稍后继续"):"下一页"}</button>
+    </div>`;
+  const copyBtn=document.getElementById("copyLessonCmd");
+  if(copyBtn) copyBtn.onclick=()=>copyText((l.commands||[]).join("\n"));
+  try{document.querySelector("#lessonModal").scrollTop=0;}catch(e){}
+}
+function setLessonStep(i){lessonStep=i;renderLessonStep();}
+function prevLessonStep(){lessonStep--;renderLessonStep();}
+function nextLessonStep(){
+  const sections=lessonSections(currentLesson);
+  if(lessonStep < sections.length-1){lessonStep++;renderLessonStep();return;}
+  closeModal();
+}
+function openLesson(id){
+  let l=DATA.lessons.find(x=>x.id===id);
+  if(!l) return;
+  currentLesson=l;
+  lessonStep=0;
+  openModal("lessonModal");
+  renderLessonStep();
+}
+function answer(btn,id,xp){let ok=+btn.dataset.i===+btn.dataset.a;btn.classList.add(ok?"correct":"wrong");btn.parentElement.querySelectorAll(".option").forEach(b=>{b.disabled=true;if(+b.dataset.i===+b.dataset.a)b.classList.add("correct")});if(!state.done.includes(id)){state.done.push(id);state.xp+=xp;save();renderAll()}result.textContent=ok?"回答正确，已通关":"答案已标出，本关已完成，建议复习"}
+function renderWork(){let cats=["全部",...new Set(DATA.problems.map(p=>p.cat))];problemFilters.innerHTML=cats.map(c=>`<button class="chip ${c===activeCat?"active":""}" onclick="setCat('${attr(c)}')">${c}</button>`).join("");let list=DATA.problems.filter(p=>activeCat==="全部"||p.cat===activeCat);problemList.innerHTML=list.map(p=>`<article class="card" onclick="openProblem('${attr(p.title)}')"><span class="sub">${p.cat}</span><h3>${p.title}</h3><p>${p.steps[0]}</p></article>`).join("")}
+function setCat(c){activeCat=c;renderWork()}
+function openProblem(title){let p=DATA.problems.find(x=>x.title===title);if(!p)return;problemCat.textContent=p.cat;problemTitle.textContent=p.title;problemBody.innerHTML=`<section class="block"><h3>排查步骤</h3>${p.steps.map((s,i)=>`<p>${i+1}. ${s}</p>`).join("")}</section><section class="block"><h3>经验提醒</h3>${p.tips.map(t=>`<p>• ${t}</p>`).join("")}</section>`;openModal("problemModal")}
+function renderTools(){
+  toolContent.innerHTML="";
+  $$(".seg button").forEach(b=>b.classList.toggle("active",b.dataset.tool===tool));
+  if(tool==="cmd"){
+    toolContent.innerHTML=DATA.commands.map(c=>`<article class="card"><span class="sub">${c.cat}</span><h3>${c.name}</h3><p>${c.desc}</p><button class="copy" onclick="copyText(${jsstr(c.example)})">复制</button><pre class="cmd">${esc(c.example)}</pre></article>`).join("");
+  }else if(tool==="boss"){
+    toolContent.innerHTML=DATA.bosses.map(b=>`<article class="card"><span class="sub">${b.world}</span><h3>${b.title}</h3>${b.steps.map(s=>`<p>• ${s}</p>`).join("")}</article>`).join("");
+  }else{
+    toolContent.innerHTML=`<article class="card"><h3>监控存储估算</h3><p>后续加入：摄像头数量、码率、天数 → 自动估算硬盘容量。</p></article><article class="card"><h3>装机/监控报价</h3><p>后续加入：配件、材料、人工 → 自动生成报价清单。</p></article>`;
+  }
+}
+function renderMe(){doneCount.textContent=state.done.length;xpCount.textContent=state.xp;favCount.textContent=state.fav.length;achievements.innerHTML=[["电脑店技术员",8],["安防巡检员",15],["网络排障员",25],["服务器学徒",35],["自动化工具师",45],["全栈工具师",60]].map(a=>`<article class="card"><h3>${state.done.length>=a[1]?"✅":"🔒"} ${a[0]}</h3><p>完成 ${a[1]} 关解锁</p></article>`).join("")}
+function renderSearch(){let k=(searchInput.value||"").toLowerCase();if(!k){searchResult.innerHTML=`<article class="card"><p>搜索工作问题、关卡、命令。</p></article>`;return}let arr=[];DATA.lessons.filter(l=>JSON.stringify(l).toLowerCase().includes(k)).slice(0,8).forEach(l=>arr.push(`<article class="card" onclick="openLesson(${l.id})"><span class="sub">关卡</span><h3>${l.title}</h3><p>${l.role}</p></article>`));DATA.problems.filter(p=>JSON.stringify(p).toLowerCase().includes(k)).slice(0,8).forEach(p=>arr.push(`<article class="card" onclick="openProblem('${attr(p.title)}')"><span class="sub">${p.cat}</span><h3>${p.title}</h3><p>${p.steps[0]}</p></article>`));DATA.commands.filter(c=>JSON.stringify(c).toLowerCase().includes(k)).slice(0,8).forEach(c=>arr.push(`<article class="card"><span class="sub">命令</span><h3>${c.name}</h3><pre class="cmd">${esc(c.example)}</pre></article>`));searchResult.innerHTML=arr.join("")||`<article class="card"><p>没找到</p></article>`}
+
+function currentTheme(){return localStorage.getItem("work_theme")||"system"}
+function setTheme(t){
+  localStorage.setItem("work_theme",t);
+  document.documentElement.setAttribute("data-theme",t);
+  renderThemeButtons();
+}
+function renderThemeButtons(){
+  const t=currentTheme();
+  document.querySelectorAll("[data-theme-choice]").forEach(b=>{
+    b.classList.toggle("active", b.dataset.themeChoice===t);
+  });
+}
+
+function copyText(txt){
+  try{
+    navigator.clipboard.writeText(txt);
+    toast("已复制");
+  }catch(e){
+    const ta=document.createElement("textarea");
+    ta.value=txt;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+    toast("已复制");
+  }
+}
+function toast(msg){
+  let t=document.getElementById("toast");
+  if(!t){
+    t=document.createElement("div");
+    t.id="toast";
+    document.body.appendChild(t);
+  }
+  t.textContent=msg;
+  t.className="show";
+  setTimeout(()=>t.className="",1400);
+}
+function jsstr(v){return JSON.stringify(String(v));}
+
+function download(name,obj){let a=document.createElement("a"),blob=new Blob([JSON.stringify(obj,null,2)],{type:"application/json;charset=utf-8"});a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href)}
+function downloadData(){download("tech-quest-data.json",DATA)}function downloadProgress(){download("tech-quest-progress.json",state)}
+function renderAll(){renderHome();renderLearn();renderWork();renderTools();renderMe();renderSearch();renderThemeButtons()}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}function attr(s){return String(s).replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,"&quot;")}
+$$(".tabbar button").forEach(b=>b.onclick=()=>nav(b.dataset.page));$$(".seg button").forEach(b=>b.onclick=()=>{tool=b.dataset.tool;renderTools()});searchInput.oninput=renderSearch;document.querySelectorAll("[data-theme-choice]").forEach(b=>b.onclick=()=>setTheme(b.dataset.themeChoice));continueBtn.onclick=()=>{
+  const next=DATA.lessons.find(l=>!state.done.includes(l.id)&&unlocked(l.id));
+  if(next){openLesson(next.id);return;}
+  alert("全部关卡已完成，可以去实战问题或工具箱继续练习。");
+  nav("work");
+};resetBtn.onclick=()=>{if(confirm("清空本机进度？")){state.done=[];state.xp=0;state.fav=[];save();renderAll();
+try{
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(){
+    if((localStorage.getItem('work_theme') || 'system') === 'system'){
+      document.documentElement.setAttribute('data-theme','system');
+      renderThemeButtons();
+    }
+  });
+}catch(e){}closeModal()}};renderAll();
+try{
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(){
+    if((localStorage.getItem('work_theme') || 'system') === 'system'){
+      document.documentElement.setAttribute('data-theme','system');
+      renderThemeButtons();
+    }
+  });
+}catch(e){}

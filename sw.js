@@ -1,4 +1,1 @@
-const CACHE="it-quest-final-v2";
-const ASSETS=["./","./index.html","./style.css","./data.js","./app.js","./manifest.json","./icon-192.png","./icon-512.png"];
-self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))));
-self.addEventListener("fetch",e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));
+self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil((async()=>{try{for(const k of await caches.keys())await caches.delete(k);await self.registration.unregister()}catch(e){}})()));self.addEventListener('fetch',e=>e.respondWith(fetch(e.request)));

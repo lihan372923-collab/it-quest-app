@@ -1,103 +1,114 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>IT 小白闯关营 Final</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"/>
+  <meta name="theme-color" content="#101827"/>
+  <title>技术成长与工作助手</title>
+  <script>
+    (function(){
+      var t = localStorage.getItem('work_theme') || 'system';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
   <link rel="manifest" href="manifest.json"/>
-  <link rel="stylesheet" href="style.css"/>
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js')</script>
+  <link rel="stylesheet" href="style.css?v=work-logic2"/>
 </head>
 <body>
 <div id="app">
-  <aside class="sidebar">
-    <div class="brand">
-      <div class="logo">IT</div>
-      <div><h1>IT 小白闯关营</h1><p>Final 一次部署版</p></div>
+  <section class="page active" id="home">
+    <header class="top">
+      <div><span class="sub">TECH QUEST</span><h1>技术成长助手</h1></div>
+      <button class="circle" onclick="openModal('settings')">⚙</button>
+    </header>
+    <article class="hero">
+      <div class="hero-bg"></div>
+      <span class="sub">当前职业</span>
+      <h2 id="roleName">技术学徒</h2>
+      <p id="progressText">已完成 0 关</p>
+      <div class="bar"><i id="progressBar"></i></div>
+      <button id="continueBtn">继续闯关</button>
+    </article>
+    <div class="title"><h3>职业地图</h3><button onclick="nav('learn')">全部</button></div>
+    <div class="scroll" id="worldStrip"></div>
+    <div class="title"><h3>工作高频问题</h3><button onclick="nav('work')">更多</button></div>
+    <div class="quick-grid" id="hotProblems"></div>
+    <div class="title"><h3>Boss 副本</h3></div>
+    <div class="cards" id="bossPreview"></div>
+  </section>
+
+  <section class="page" id="learn">
+    <header class="top"><h1>学习地图</h1><button class="circle" onclick="openModal('search')">⌕</button></header>
+    <div class="world-tabs" id="worldTabs"></div>
+    <div class="path" id="lessonPath"></div>
+  </section>
+
+  <section class="page" id="work">
+    <header class="top"><h1>实战问题</h1><button class="circle" onclick="openModal('search')">⌕</button></header>
+    <div class="filters" id="problemFilters"></div>
+    <div class="cards" id="problemList"></div>
+  </section>
+
+  <section class="page" id="tools">
+    <header class="top"><h1>工具箱</h1><button class="circle" onclick="openModal('search')">⌕</button></header>
+    <div class="seg"><button class="active" data-tool="cmd">命令</button><button data-tool="boss">副本</button><button data-tool="calc">计算器</button></div>
+    <div id="toolContent" class="cards"></div>
+  </section>
+
+  <section class="page" id="me">
+    <header class="top"><h1>我的角色</h1><button class="circle" onclick="openModal('settings')">⚙</button></header>
+    <div class="stats">
+      <div><b id="doneCount">0</b><span>完成关卡</span></div>
+      <div><b id="xpCount">0</b><span>XP</span></div>
+      <div><b id="favCount">0</b><span>收藏</span></div>
     </div>
-    <nav id="nav">
-      <button class="active" data-page="home">首页</button>
-      <button data-page="routes">学习路线</button>
-      <button data-page="map">闯关地图</button>
-      <button data-page="search">全局搜索</button>
-      <button data-page="commands">命令速查</button>
-      <button data-page="troubles">排查工具箱</button>
-      <button data-page="projects">实战项目</button>
-      <button data-page="glossary">术语词典</button>
-      <button data-page="wrong">错题本</button>
-      <button data-page="notes">学习笔记</button>
-      <button data-page="admin">数据管理</button>
-      <button data-page="achievements">成就</button>
-    </nav>
-    <button id="resetBtn" class="danger">重置本地进度</button>
-  </aside>
+    <div class="title"><h3>成就</h3></div>
+    <div class="cards" id="achievements"></div>
+  </section>
 
-  <main class="main">
-    <section id="home" class="page active">
-      <div class="hero">
-        <div>
-          <span class="tag">当前等级</span>
-          <h2 id="levelName">Lv1 电脑新手</h2>
-          <p id="progressText">已完成 0 / 100 关</p>
-          <div class="progress"><span id="progressBar"></span></div>
-          <div class="hero-actions">
-            <button id="continueBtn">继续学习</button>
-            <button class="ghost" data-jump="routes">选择路线</button>
-          </div>
-        </div>
-        <div class="daily">
-          <h3>今日推荐</h3>
-          <ul id="dailyList"></ul>
-        </div>
-      </div>
-      <div class="grid two">
-        <div class="card"><h3>一次部署版</h3><p>以后课程、命令、排查案例、项目内容都可以在“数据管理”里导入导出，不需要反复改代码部署。</p></div>
-        <div class="card"><h3>完整学习顺序</h3><p>电脑基础 → 网络 → Linux → 服务器 → 建站 → 数据库 → Docker → 排错 → 安全 → 项目。</p></div>
-      </div>
-    </section>
+  <section class="modal" id="lessonModal">
+    <header class="modalTop"><button onclick="closeModal()">‹</button><div><span class="sub" id="lessonMeta">关卡</span><h2 id="lessonTitle">标题</h2></div></header>
+    <main id="lessonBody"></main>
+  </section>
 
-    <section id="routes" class="page"><div class="head"><h2>学习路线</h2><p>按目标选择路线。</p></div><div id="routeList" class="grid"></div></section>
-    <section id="map" class="page"><div class="head"><h2>闯关地图</h2><p>100 关从浅到深逐步解锁。</p></div><div id="stageList" class="stage-list"></div></section>
-    <section id="lesson" class="page"><button class="ghost" id="backBtn">← 返回</button><article id="lessonContent" class="lesson-card"></article></section>
-    <section id="search" class="page"><div class="head"><h2>全局搜索</h2><input id="globalSearch" placeholder="搜索 nginx / docker / ssh / 网站打不开"/></div><div id="searchResults" class="grid"></div></section>
-    <section id="commands" class="page"><div class="head"><h2>命令速查</h2><input id="commandSearch" placeholder="搜索命令"/></div><div id="commandList" class="grid"></div></section>
-    <section id="troubles" class="page"><div class="head"><h2>故障排查工具箱</h2><p>遇到问题先按清单查，不要乱改。</p></div><div id="troubleList" class="grid"></div></section>
-    <section id="projects" class="page"><div class="head"><h2>实战项目</h2><p>用项目把知识串起来。</p></div><div id="projectList" class="grid"></div></section>
-    <section id="glossary" class="page"><div class="head"><h2>术语词典</h2><input id="glossarySearch" placeholder="搜索术语"/></div><div id="glossaryList" class="grid"></div></section>
-    <section id="wrong" class="page"><div class="head"><h2>错题本</h2><button class="ghost" id="clearWrong">清空错题</button></div><div id="wrongList" class="grid"></div></section>
-    <section id="notes" class="page"><div class="head"><h2>学习笔记</h2><button id="exportNotes">导出笔记</button></div><div id="notesList" class="grid"></div></section>
-    <section id="admin" class="page">
-      <div class="head"><h2>数据管理</h2><p>以后更新内容直接导入 JSON，不用重新部署代码。</p></div>
-      <div class="grid two">
-        <div class="card">
-          <h3>导出完整数据</h3>
-          <p>导出课程、命令、排查、项目、词典数据，可备份或二次编辑。</p>
-          <button id="exportData">导出 data.json</button>
+  <section class="modal" id="problemModal">
+    <header class="modalTop"><button onclick="closeModal()">‹</button><div><span class="sub" id="problemCat">问题</span><h2 id="problemTitle">标题</h2></div></header>
+    <main id="problemBody"></main>
+  </section>
+
+  <section class="modal" id="search">
+    <header class="modalTop"><button onclick="closeModal()">‹</button><input id="searchInput" class="search" placeholder="搜索 摄像头离线 / 装系统 / nginx"/></header>
+    <div class="cards" id="searchResult"></div>
+  </section>
+
+  <section class="modal" id="settings">
+    <header class="modalTop"><button onclick="closeModal()">‹</button><h2>设置</h2></header>
+    <div class="cards">
+      <article class="card">
+        <h3>显示模式</h3>
+        <p>可跟随手机系统，也可以手动固定白天/黑夜。</p>
+        <div class="theme-options">
+          <button data-theme-choice="system">跟随系统</button>
+          <button data-theme-choice="light">白天</button>
+          <button data-theme-choice="dark">黑夜</button>
         </div>
-        <div class="card">
-          <h3>导入完整数据</h3>
-          <p>导入后会覆盖当前浏览器里的课程数据，刷新页面仍保留。</p>
-          <input type="file" id="importData" accept=".json"/>
-        </div>
-        <div class="card">
-          <h3>导出学习进度</h3>
-          <p>备份自己的通关、错题、收藏、任务、笔记。</p>
-          <button id="exportProgress">导出 progress.json</button>
-        </div>
-        <div class="card">
-          <h3>导入学习进度</h3>
-          <p>换手机或换浏览器时导入进度。</p>
-          <input type="file" id="importProgress" accept=".json"/>
-        </div>
-      </div>
-      <div class="card">
-        <h3>当前数据预览</h3>
-        <textarea id="dataPreview" readonly></textarea>
-      </div>
-    </section>
-    <section id="achievements" class="page"><div class="head"><h2>成就徽章</h2></div><div id="achievementList" class="grid"></div></section>
-  </main>
+      </article>
+      <article class="card"><h3>导出课程数据</h3><p>以后可以继续扩充内容。</p><button onclick="downloadData()">导出 JSON</button></article>
+      <article class="card"><h3>导出学习进度</h3><p>换手机前备份。</p><button onclick="downloadProgress()">导出进度</button></article>
+      <article class="card danger"><h3>重置本机数据</h3><button id="resetBtn">清空进度</button></article>
+    </div>
+  </section>
+
+  <nav class="tabbar">
+    <button class="active" data-page="home"><span>🏠</span>首页</button>
+    <button data-page="learn"><span>🗺️</span>学习</button>
+    <button data-page="work"><span>🧰</span>实战</button>
+    <button data-page="tools"><span>⚙️</span>工具</button>
+    <button data-page="me"><span>🎮</span>我的</button>
+  </nav>
 </div>
-<script src="data.js"></script>
-<script src="app.js"></script>
+<script src="data.js?v=work-logic2"></script>
+<script src="app.js?v=work-logic2"></script>
 </body>
 </html>
